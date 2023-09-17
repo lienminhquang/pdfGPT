@@ -4,7 +4,6 @@ import shutil
 import urllib.request
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from litellm import completion
 import fitz
 import numpy as np
 import openai
@@ -12,6 +11,10 @@ import tensorflow_hub as hub
 from fastapi import UploadFile
 from lcserve import serving
 from sklearn.neighbors import NearestNeighbors
+import openai
+openai.api_type = "azure"
+openai.api_base = "https://pixelml-azureopenai.openai.azure.com/"
+openai.api_version = "2022-12-01"
 
 
 recommender = None
@@ -109,19 +112,19 @@ def load_recommender(path, start_page=1):
 
 
 def generate_text(openAI_key, prompt, engine="text-davinci-003"):
-    # openai.api_key = openAI_key
+    openai.api_key = openAI_key
     try:
-        messages=[{ "content": prompt,"role": "user"}]
-        completions = completion(
-            model=engine,
-            messages=messages,
-            max_tokens=512,
-            n=1,
-            stop=None,
+        response = openai.Completion.create(
+            engine=engine,
+            prompt=prompt,
             temperature=0.7,
-            api_key=openAI_key
-        )
-        message = completions['choices'][0]['message']['content']
+            max_tokens=512,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0,
+            stop=["\n"])
+        message = response['choices'][0]['text']
+
     except Exception as e:
         message = f'API Error: {str(e)}'
     return message 
@@ -146,7 +149,7 @@ def generate_answer(question, openAI_key):
     )
 
     prompt += f"Query: {question}\nAnswer:"
-    answer = generate_text(openAI_key, prompt, "text-davinci-003")
+    answer = generate_text(openAI_key, prompt, "test")
     return answer
 
 
